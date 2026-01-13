@@ -4,15 +4,22 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/wait.h>
+#include <signal.h>
 #define MAXLI 2048
 char PATH[MAXLI];
 char cmd[MAXLI];
 char path[MAXLI] = "/usr/bin/";
 int pathidx;
 char* argv[MAXLI];
+char* history[MAXLI];
+int histcount = 0;
+int continu = 1;
+
 //declaration des fonctions
 void mbash(char cm[MAXLI]);
 void setArgs(char cm[MAXLI]);
+void printHistory();
+void sigint_handler(int sig);
 
 //ETATS
 const int E_CMD = 1;
@@ -22,20 +29,23 @@ const int E_FIN = 0;
 
 int main(int argc, char** argv) {
 
+    signal(SIGINT, sigint_handler);
     strcpy(PATH,getenv("PATH"));
 
-    if(PATH != NULL){
-        printf("path : %s", PATH);
+    while (continu) {
+        strcpy(PATH,getenv("PATH"));
+        printf("Commande: ");
+
+        if (fgets(cmd, MAXLI, stdin) == NULL) {
+            // fgets interrompu par Ctrl+C ou EOF
+            continue;
+        }
+
+        mbash(cmd);
     }
-
-  while (1) {
-    strcpy(PATH,getenv("PATH"));
-    printf("Commande: ");
-    fgets(cmd, MAXLI, stdin);
-    mbash(cmd);
-  }
-  return 0;
+    return 0;
 }
+
 
 
 void mbash(char cm[MAXLI]) {
@@ -44,11 +54,20 @@ void mbash(char cm[MAXLI]) {
     int size = strlen(cm);
     cm[size - 1] = '\0';
 
+    //on ajoute la commande à l'historique
+    history[histcount] = strdup(cm);
+    histcount++;
+
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
 
+    //on verifie si la commande est vide
+    if (argv[0] == NULL) return;
+
+
     //on construit le chemin dans /usr/bin et la commande
     char chemin[MAXLI];
+
     //strcpy(chemin, path);
     //strcat(chemin, argv[0]);
 
@@ -67,18 +86,32 @@ void mbash(char cm[MAXLI]) {
     }
 
 
+
     printf("Execute: %s\n", chemin);
 
-    
-
-    //Exécution de la commande dans un processus enfant
-    if (fork() == 0) {
-        execve(chemin, argv, NULL);
-        perror("execve");
-        exit(1);
-    } else {
-        wait(1000);
+    if (strcmp(argv[0], "history") == 0) {
+        printHistory();
+        return;
     }
+
+    pid_t pid = fork();
+
+        if (pid == 0) {
+            // L'enfant doit avoir le comportement par défaut
+            signal(SIGINT, SIG_DFL);
+
+            execve(chemin, argv, NULL);
+
+            perror("execve");
+            exit(1);
+        }
+        else if (pid > 0) {
+            wait(NULL);
+        }
+        else {
+            perror("fork");
+        }
+
 }
 
 
@@ -108,4 +141,18 @@ int existFile(char* path){
     } 
     return 0;
 }
+
+
+void printHistory() {
+    for (int i = 0; i < histcount; i++) {
+        //Affichage historique comme dans history de BASH : 'N° de commande  <commande>'
+        printf("%d  %s\n", i + 1, history[i]);
+    }
+}
+
+void sigint_handler(int sig) {
+    write(1, "\nCommande: ", 12);
+}
+
+
 
