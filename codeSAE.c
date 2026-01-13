@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/wait.h>
+#include <signal.h>
 #define MAXLI 2048
 char cmd[MAXLI];
 char path[MAXLI] = "/usr/bin/";
@@ -11,9 +12,13 @@ int pathidx;
 char* argv[MAXLI];
 char* history[MAXLI];
 int histcount = 0;
+int continu = 1;
+
 //declaration des fonctions
 void mbash(char cm[MAXLI]);
 void setArgs(char cm[MAXLI]);
+void printHistory();
+void sigint_handler(int sig);
 
 //ETATS
 const int E_CMD = 1;
@@ -22,13 +27,21 @@ const int E_ARGUMENT = 3;
 const int E_FIN = 0;
 
 int main(int argc, char** argv) {
-  while (1) {
-    printf("Commande: ");
-    fgets(cmd, MAXLI, stdin);
-    mbash(cmd);
-  }
-  return 0;
+    signal(SIGINT, sigint_handler);
+
+    while (continu) {
+        printf("Commande: ");
+
+        if (fgets(cmd, MAXLI, stdin) == NULL) {
+            // fgets interrompu par Ctrl+C ou EOF
+            continue;
+        }
+
+        mbash(cmd);
+    }
+    return 0;
 }
+
 
 
 void mbash(char cm[MAXLI]) {
@@ -44,6 +57,10 @@ void mbash(char cm[MAXLI]) {
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
 
+    //on verifie si la commande est vide
+    if (argv[0] == NULL) return;
+
+
     //on construit le chemin dans /usr/bin et la commande
     char chemin[MAXLI];
     strcpy(chemin, path);
@@ -57,14 +74,24 @@ void mbash(char cm[MAXLI]) {
         return;
     }
 
-    //Exécution de la commande dans un processus enfant
-    if (fork() == 0) {
-        execve(chemin, argv, NULL);
-        perror("execve");
-        exit(1);
-    } else {
-        wait(NULL);
-    }
+    pid_t pid = fork();
+
+        if (pid == 0) {
+            // L'enfant doit avoir le comportement par défaut
+            signal(SIGINT, SIG_DFL);
+
+            execve(chemin, argv, NULL);
+
+            perror("execve");
+            exit(1);
+        }
+        else if (pid > 0) {
+            wait(NULL);
+        }
+        else {
+            perror("fork");
+        }
+
 }
 
 
@@ -91,5 +118,10 @@ void printHistory() {
         printf("%d  %s\n", i + 1, history[i]);
     }
 }
+
+void sigint_handler(int sig) {
+    write(1, "\nCommande: ", 12);
+}
+
 
 
