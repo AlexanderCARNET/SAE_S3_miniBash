@@ -24,6 +24,7 @@ void mbash(char cm[MAXLI]);
 void setArgs(char cm[MAXLI]);
 void printHistory();
 void sigint_handler(int sig);
+int existFile(char* path);
 
 //ETATS
 const int E_CMD = 1;
@@ -104,7 +105,7 @@ void mbash(char cm[MAXLI]) {
 
     pid_t pid = fork();
 
-
+    
     if (pid == 0) {
         signal(SIGINT, SIG_DFL);  // l’enfant réagit normalement à Ctrl+C
         execve(chemin, argv, environ);
@@ -160,4 +161,9 @@ void sigint_handler(int sig) {
         write(1, "\n", 1);
     }
 }
+
+void cd(char* chemin){
+    chdir(chemin);
+}
+
 
