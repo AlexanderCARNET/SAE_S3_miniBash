@@ -101,6 +101,9 @@ void mbash(char cm[MAXLI]) {
         }
         
         return;
+    } else if (strcmp(argv[0], "exit") == 0) {
+        continu = 0;
+        return;
     }
 
     pid_t pid = fork();
