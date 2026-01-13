@@ -13,6 +13,7 @@ char* argv[MAXLI];
 char* history[MAXLI];
 int histcount = 0;
 int continu = 1;
+extern char **environ;
 
 //declaration des fonctions
 void mbash(char cm[MAXLI]);
@@ -51,8 +52,12 @@ void mbash(char cm[MAXLI]) {
     cm[size - 1] = '\0';
 
     //on ajoute la commande à l'historique
-    history[histcount] = strdup(cm);
-    histcount++;
+    if(histcount < MAXLI) {
+        if(cm[0] != '\0') {
+            history[histcount] = strdup(cm);
+            histcount++;
+        }
+    }
 
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
@@ -80,7 +85,7 @@ void mbash(char cm[MAXLI]) {
             // L'enfant doit avoir le comportement par défaut
             signal(SIGINT, SIG_DFL);
 
-            execve(chemin, argv, NULL);
+            execve(chemin, argv, environ);
 
             perror("execve");
             exit(1);
