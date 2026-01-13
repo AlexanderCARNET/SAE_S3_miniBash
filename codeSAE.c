@@ -5,11 +5,12 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <signal.h>
+
+extern char **environ;
+
 #define MAXLI 2048
 char PATH[MAXLI];
 char cmd[MAXLI];
-char path[MAXLI] = "/usr/bin/";
-int pathidx;
 char* argv[MAXLI];
 char* history[MAXLI];
 int histcount = 0;
@@ -65,13 +66,8 @@ void mbash(char cm[MAXLI]) {
     if (argv[0] == NULL) return;
 
 
-    //on construit le chemin dans /usr/bin et la commande
-    char chemin[MAXLI];
-
-    //strcpy(chemin, path);
-    //strcat(chemin, argv[0]);
-
     //on cherche le repertoir dans le path ou la commande existe
+    char chemin[MAXLI];
     int trouvee = 0;
     char* extraitPATH = strtok(PATH,":");
     while(extraitPATH != NULL && !trouvee){
@@ -90,7 +86,12 @@ void mbash(char cm[MAXLI]) {
     printf("Execute: %s\n", chemin);
 
     if (strcmp(argv[0], "history") == 0) {
-        printHistory();
+        if(argv[1] != NULL){
+            printf("La commande ne prend pas d'argument\n");
+        }else{
+            printHistory();
+        }
+        
         return;
     }
 
@@ -100,7 +101,7 @@ void mbash(char cm[MAXLI]) {
             // L'enfant doit avoir le comportement par défaut
             signal(SIGINT, SIG_DFL);
 
-            execve(chemin, argv, NULL);
+            execve(chemin, argv, environ);
 
             perror("execve");
             exit(1);
@@ -111,7 +112,6 @@ void mbash(char cm[MAXLI]) {
         else {
             perror("fork");
         }
-
 }
 
 
@@ -153,6 +153,8 @@ void printHistory() {
 void sigint_handler(int sig) {
     write(1, "\nCommande: ", 12);
 }
+
+
 
 
 
