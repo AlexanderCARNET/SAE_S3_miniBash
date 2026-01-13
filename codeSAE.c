@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <sys/wait.h>
 #define MAXLI 2048
+char PATH[MAXLI];
 char cmd[MAXLI];
 char path[MAXLI] = "/usr/bin/";
 int pathidx;
@@ -20,7 +21,15 @@ const int E_ARGUMENT = 3;
 const int E_FIN = 0;
 
 int main(int argc, char** argv) {
+
+    strcpy(PATH,getenv("PATH"));
+
+    if(PATH != NULL){
+        printf("path : %s", PATH);
+    }
+
   while (1) {
+    strcpy(PATH,getenv("PATH"));
     printf("Commande: ");
     fgets(cmd, MAXLI, stdin);
     mbash(cmd);
@@ -40,8 +49,23 @@ void mbash(char cm[MAXLI]) {
 
     //on construit le chemin dans /usr/bin et la commande
     char chemin[MAXLI];
-    strcpy(chemin, path);
-    strcat(chemin, argv[0]);
+    //strcpy(chemin, path);
+    //strcat(chemin, argv[0]);
+
+    //on cherche le repertoir dans le path ou la commande existe
+    int trouvee = 0;
+    char* extraitPATH = strtok(PATH,":");
+    while(extraitPATH != NULL && !trouvee){
+        strcpy(chemin, extraitPATH);
+        strcat(chemin, "/");
+        strcat(chemin, argv[0]);
+        trouvee = existFile(chemin);
+        if(!trouvee){
+            extraitPATH = strtok(NULL, ":");
+        }
+         
+    }
+
 
     printf("Execute: %s\n", chemin);
 
@@ -73,5 +97,15 @@ void setArgs(char cm[MAXLI]){
     }
 
     argv[indArg] = NULL;
+}
+
+
+int existFile(char* path){
+    FILE *f = fopen(path,"r");
+    if(f){
+        fclose(f);
+        return 1;
+    } 
+    return 0;
 }
 
