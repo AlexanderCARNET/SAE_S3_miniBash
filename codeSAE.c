@@ -25,6 +25,7 @@ void setArgs(char cm[MAXLI]);
 void printHistory();
 void sigint_handler(int sig);
 int existFile(char* path);
+void cd(char* chemin);
 
 //ETATS
 const int E_CMD = 1;
@@ -90,9 +91,12 @@ void mbash(char cm[MAXLI]) {
     }
 
 
+    if(trouvee){
+        printf("Execute: %s\n", chemin);
+    }
+    
 
-    printf("Execute: %s\n", chemin);
-
+    //gestion de l'history
     if (strcmp(argv[0], "history") == 0) {
         if(argv[1] != NULL){
             printf("La commande ne prend pas d'argument\n");
@@ -101,10 +105,28 @@ void mbash(char cm[MAXLI]) {
         }
         
         return;
-    } else if (strcmp(argv[0], "exit") == 0) {
+    } 
+
+    //gestion du exit
+    if (strcmp(argv[0], "exit") == 0) { 
         continu = 0;
         return;
     }
+
+    //gestion du cd
+    if(strcmp(argv[0], "cd") == 0){
+        if(argv[2] != NULL){
+            printf("Trop d'argument\n");
+            return;
+        }else if(argv[1] == NULL){
+            printf("Il manque 1 argument\n");
+            return ;
+        }else{
+            cd(argv[1]);
+            return ;
+        }
+    }
+
 
     pid_t pid = fork();
 
