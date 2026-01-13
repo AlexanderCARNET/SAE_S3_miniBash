@@ -108,7 +108,7 @@ void mbash(char cm[MAXLI]) {
 
     pid_t pid = fork();
 
-    
+
     if (pid == 0) {
         signal(SIGINT, SIG_DFL);  // l’enfant réagit normalement à Ctrl+C
         execve(chemin, argv, environ);
