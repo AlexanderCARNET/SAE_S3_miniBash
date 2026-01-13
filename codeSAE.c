@@ -15,6 +15,8 @@ char* history[MAXLI];
 int histcount = 0;
 int continu = 1;
 extern char **environ;
+pid_t current_child = -1;
+
 
 //declaration des fonctions
 void mbash(char cm[MAXLI]);
@@ -101,22 +103,18 @@ void mbash(char cm[MAXLI]) {
 
     pid_t pid = fork();
 
-        if (pid == 0) {
-            // L'enfant doit avoir le comportement par défaut
-            signal(SIGINT, SIG_DFL);
-
-            execve(chemin, argv, environ);
-
-            perror("execve");
-            exit(1);
-        }
-        else if (pid > 0) {
-            wait(NULL);
-        }
-        else {
-            perror("fork");
-        }
-
+    if (pid == 0) {
+        signal(SIGINT, SIG_DFL);  // l’enfant réagit normalement à Ctrl+C
+        execve(chemin, argv, environ);
+        perror("execve");
+        exit(1);
+    } else if (pid > 0) {
+        current_child = pid;
+        waitpid(pid, NULL, 0);
+        current_child = -1;
+    } else {
+        perror("fork");
+    }
 }
 
 
@@ -156,8 +154,11 @@ void printHistory() {
 }
 
 void sigint_handler(int sig) {
-    write(1, "\nCommande: ", 12);
+    if (current_child > 0) {
+        write(1, "\n", 1);
+    }
 }
+
 
 
 
