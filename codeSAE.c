@@ -26,12 +26,19 @@ void printHistory();
 void sigint_handler(int sig);
 int existFile(char* path);
 void cd(char* chemin);
+void executerCommande(char cm[MAXLI]);
 
 //ETATS
-const int E_CMD = 1;
-const int E_ESPACE = 2;
-const int E_ARGUMENT = 3;
-const int E_FIN = 0;
+#define E_FIN 100
+#define E_DEBUT 0
+#define E_INIT 1
+#define E_ESPACE 2
+#define E_ARGUMENT 3
+#define E_POINT 4
+#define E_POINT_SLASH 5
+#define E_FORK 6
+#define E_ERROR -1
+
 
 int main(int argc, char** argv) {
 
@@ -46,7 +53,6 @@ int main(int argc, char** argv) {
             // fgets interrompu par Ctrl+C ou EOF
             continue;
         }
-
         mbash(cmd);
     }
     return 0;
@@ -68,12 +74,117 @@ void mbash(char cm[MAXLI]) {
         }
     }
 
+    //on lance l'automate
+    char commande[MAXLI];
+    int ind = 0;
+    int indCommande = 0;
+    int etat = E_DEBUT;
+    while(etat != E_FIN && etat != E_FORK){
+        char c = cm[ind];
+        switch(etat){
+            case E_DEBUT:
+                if(c == '\0'){
+                    etat = E_FIN;
+                }else if(c == '.'){
+                    etat = E_POINT;
+                }else if(c == ' '){
+                    etat = E_DEBUT;
+                }else{
+                    etat = E_INIT;
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                }
+                break;
+
+            case E_INIT:
+                if(c == '\0'){
+                    etat = E_FIN;
+                }else if(c == ' '){
+                    etat = E_ESPACE;
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                }else{
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                }
+                break;
+
+            case E_ARGUMENT:
+                if(c == '\0'){
+                    etat = E_FIN;
+                }else if(c == ' '){
+                    etat = E_ESPACE;
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                }else{
+                    etat = E_ARGUMENT;
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                }
+                break;
+
+            case E_ESPACE:
+                if(c == '\0'){
+                    etat = E_FIN;
+                }else if(c == ' '){
+                    etat = E_ESPACE;
+                }else if(c == '&'){
+                    etat = E_FORK;
+                }else{
+                    etat = E_ARGUMENT;
+                    commande[indCommande] =  c;
+                    indCommande++;
+                    commande[indCommande] =  '\0';
+                    
+                }
+                break;
+
+            case E_POINT:
+                break;
+
+            case E_POINT_SLASH:
+                break;
+
+            case E_FORK:
+                if(fork() == 0){
+                    executerCommande(commande);
+                    exit(1);
+                }
+                break;
+
+            case E_ERROR:
+                break;
+
+            default:
+                etat = E_ERROR;
+        }
+        ind++;
+    }
+
+    if(etat == E_FIN){
+        executerCommande(commande);
+    }
+
+    //on efface la commande
+    int i = 0;
+    while(commande[i] != '\0'){
+        commande[i] = '\0';
+        i++;
+    }
+    
+}
+
+void executerCommande(char cm[MAXLI]){
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
 
     //on verifie si la commande est vide
     if (argv[0] == NULL) return;
-
 
     //on cherche le repertoir dans le path ou la commande existe
     char chemin[MAXLI];
@@ -119,7 +230,9 @@ void mbash(char cm[MAXLI]) {
             printf("Trop d'argument\n");
             return;
         }else if(argv[1] == NULL){
-            printf("Il manque 1 argument\n");
+            char cheminUser[1000] = "/home/"; 
+            strcat(cheminUser,getenv("USER"));
+            cd(cheminUser);
             return ;
         }else{
             cd(argv[1]);
