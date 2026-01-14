@@ -9,7 +9,7 @@
 extern char **environ;
 #define FRAMES 23
 #define LINES 100
-#define LINE_LEN 134
+#define LINE_LEN 137
 #define MAXLI 2048
 char PATH[MAXLI];
 char cmd[MAXLI];
@@ -19,6 +19,7 @@ int histcount = 0;
 int continu = 1;
 extern char **environ;
 pid_t current_child = -1;
+int animation_running = 0;
 
 
 //declaration des fonctions
@@ -37,7 +38,6 @@ const int E_ARGUMENT = 3;
 const int E_FIN = 0;
 
 int main(int argc, char** argv) {
-
     signal(SIGINT, sigint_handler);
     strcpy(PATH,getenv("PATH"));
     printf("Bonjour %s\n", getenv("USER"));
@@ -146,6 +146,7 @@ void mbash(char cm[MAXLI]) {
 
 
    if (strcmp(argv[0], "kirua") == 0) {
+        signal(SIGINT, sigint_handler);
         kirua();
         return;
 }
@@ -281,7 +282,10 @@ void printHistory() {
 }
 
 void sigint_handler(int sig) {
-    if (current_child > 0) {
+    if (animation_running) {
+        animation_running = 0; // On demande l'arrêt de la boucle
+    }
+    else if (current_child > 0) {
         write(1, "\n", 1);
     }
 }
@@ -292,53 +296,39 @@ void cd(char* chemin){
 
 void kirua() {
     FILE *file = fopen("ascii-animation.txt", "r");
-    if (!file) {
-        printf("Erreur : fichier 'ascii-animation.txt' introuvable dans le dossier courant.\n");
-        return;
-    }
+    if (!file) { printf("File not found\n"); return; }
 
-    // Static to avoid stack overflow (300KB is large for stack)
     static char frames[FRAMES][LINES][LINE_LEN];
-
-    // Initialize memory
     memset(frames, 0, sizeof(frames));
 
-    // Loading
     for (int f = 0; f < FRAMES; f++) {
-        // Read the separator line if present, or just lines
-        // Based on previous file, we assume pure lines. 
-        // If the file has metadata lines, fget logic might need adjustment.
         for (int l = 0; l < LINES; l++) {
-            if (fgets(frames[f][l], LINE_LEN, file) == NULL) break;
-            
-            // remove newline for cleaner printing if needed, 
-            // but your loop uses fputs which expects null-termination
+            if (!fgets(frames[f][l], LINE_LEN, file)) break;
             size_t len = strlen(frames[f][l]);
-            if(len > 0 && frames[f][l][len-1] == '\n') {
-                frames[f][l][len-1] = '\0';
-            }
+            if (len > 0 && frames[f][l][len - 1] == '\n') 
+                frames[f][l][len - 1] = '\0';
         }
     }
     fclose(file);
 
-    printf("\033[?25l"); // Hide cursor
-
+    printf("\033[?25l"); 
+    animation_running = 1;
+    signal(SIGINT, sigint_handler);
     for (int loop = 0; loop < 3; loop++) {
-        for (int f = 0; f < FRAMES; f++) {
-            printf("\033[H\033[2J"); // Clear screen
-            
-            // Skip the first line if it contains metadata like 
-            int start_line = (strncmp(frames[f][0], "[source", 7) == 0) ? 1 : 0;
+        for (int f = 0; f < FRAMES && animation_running; f++) {
+            printf("\033[H\033[2J"); 
 
-            for (int l = start_line; l < LINES; l++) {
+            for (int l = 0; l < LINES && animation_running; l++) {
                 if (frames[f][l][0] != '\0') {
                     printf("%s\n", frames[f][l]);
+                } else {
+                    printf("\n");
                 }
             }
             fflush(stdout);
-            usleep(100000); // 100ms
+            usleep(100000); 
         }
     }
-
-    printf("\033[?25h"); // Show cursor
+    animation_running = 0;
+    printf("\033[?25h"); 
 }
