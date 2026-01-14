@@ -29,7 +29,7 @@ void printHistory();
 void sigint_handler(int sig);
 int existFile(char* path);
 void cd(char* chemin);
-void kirua();
+void goku();
 
 //ETATS
 const int E_CMD = 1;
@@ -51,11 +51,15 @@ int main(int argc, char** argv) {
     printf(" XXXXXX          XXXX    XXXXXX     XXXX XXXXXXXXX X     X\n");
     printf("\n");
     printf("Bienvenue dans mbash, bash minimaliste en C.\n");
-    printf("Taper 'exit' pour quitter.\n");
-    printf("Taper 'history' pour afficher l'historique des commandes.\n");
-
-
-
+    printf("Les commandes fonctionnelles sont :\n");
+    printf(" - Celle presente dans le PATH\n");
+    printf(" - exit\n");
+    printf(" - history\n");
+    printf(" - goku\n");
+    printf(" - gohan\n");
+    printf(" - ./ (éxécution d'un fichier)\n");
+    printf(" - cd <répertoire>\n");
+    
     while (continu) {
         strcpy(PATH,getenv("PATH"));
         printf("Commande: ");
@@ -145,9 +149,9 @@ void mbash(char cm[MAXLI]) {
 }
 
 
-   if (strcmp(argv[0], "kirua") == 0) {
+   if (strcmp(argv[0], "goku") == 0) {
         signal(SIGINT, sigint_handler);
-        kirua();
+        goku();
         return;
 }
 
@@ -294,7 +298,7 @@ void cd(char* chemin){
     chdir(chemin);
 }
 
-void kirua() {
+void goku() {
     FILE *file = fopen("ascii-animation.txt", "r");
     if (!file) { printf("File not found\n"); return; }
 
