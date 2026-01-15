@@ -12,6 +12,18 @@ extern char **environ;
 #define LINES 100
 #define LINE_LEN 137
 #define MAXLI 2048
+#define MAX_VAR 100
+
+
+
+//declaration structure 
+typedef struct {
+    char name[64];
+    char value[256];
+} shell_var;
+
+//declaration des variables
+char *GOKU_PATH;
 char PATH[MAXLI];
 char cmd[MAXLI];
 char* argv[MAXLI];
@@ -21,7 +33,12 @@ int continu = 1;
 extern char **environ;
 pid_t current_child = -1;
 int animation_running = 0;
+
 int NB_PROC = 0;
+
+shell_var vars[MAX_VAR];
+int var_count = 0;
+
 
 
 //declaration des fonctions
@@ -34,6 +51,9 @@ void cd(char* chemin);
 void executerCommande(char cm[MAXLI]);
 void goku();
 void viderString(char* string);
+char *get_var(const char *name);
+void set_var(const char *name, const char *value);
+void goku_path_absolute();
 
 
 //ETATS
@@ -50,6 +70,7 @@ void viderString(char* string);
 
 
 int main(int argc, char** argv) {
+    goku_path_absolute();
     signal(SIGINT, sigint_handler);
     strcpy(PATH,getenv("PATH"));
     printf("Bonjour %s\n", getenv("USER"));
@@ -71,6 +92,8 @@ int main(int argc, char** argv) {
     printf(" - gohan\n");
     printf(" - ./ (éxécution d'un fichier)\n");
     printf(" - cd <répertoire>\n");
+    printf(" - Ajout de variable avec valeur : <nom>=<valeur>\n");
+    printf(" - Accés au variable : $<nom>\n");
     
     while (continu) {
         strcpy(PATH,getenv("PATH"));
@@ -100,6 +123,22 @@ void mbash(char cm[MAXLI]) {
             histcount++;
         }
     }
+
+    char *eq = strchr(cm, '=');
+    if (eq && cm[0] != '=') {
+        *eq = '\0';
+        char *name = cm;
+        char *value = eq + 1;
+
+        if (value[0] == '$') {
+            char *v = get_var(value + 1);
+            if (v) value = v;
+        }
+
+        set_var(name, value);
+        return;
+    }
+
 
     //on lance l'automate
     char commandes[MAXLI][MAXLI];
@@ -224,6 +263,15 @@ void executerCommande(char cm[MAXLI]){
 
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
+
+    for (int i = 0; argv[i]; i++) {
+    if (argv[i][0] == '$') {
+        char *val = get_var(argv[i] + 1);
+        if (val) {
+            argv[i] = val;
+        }
+    }
+}
 
     //on verifie si la commande est vide
     if (argv[0] == NULL) return;
@@ -367,13 +415,13 @@ void executerCommande(char cm[MAXLI]){
 "#######################       #####  ######### ##  ########################\n"
 "###################    ########### # #############  #######################\n"
 "#################   ############## # ##############  ######################\n"
-"################  ################   # #############  #######################\n"
-"###############  ##############   #   ############### #######################\n"
-"##############  ################          ###########  #######################\n"
-"#############  ##############      ##   ###-  +####### #######################\n"
-"#############  #############   ######## #  ###########    ###################\n"
-"##############  # #######.   ##########  ##  #########  #  ###################\n"
-"###############     ##   #. ###########  ###  ########  - -###############\n"
+"################  ################   # #############  #####################\n"
+"###############  ##############   #   ############### #####################\n"
+"##############  ################          ###########  ####################\n"
+"#############  ##############      ##   ###-  +####### ####################\n"
+"#############  #############   ######## #  ###########    #################\n"
+"##############  # #######.   ##########  ##  #########  #  ################\n"
+"###############     ##   #. ###########  ###  ########  - -################\n"
 "###################    ###  ############# #############  #  ###############\n"
 "##################   -##   ##############  #  ########## ## +##############\n"
 "##################      ##################  ##  .######. ## ###############\n"
@@ -444,6 +492,34 @@ void setArgs(char cm[MAXLI]){
     argv[indArg] = NULL;
 }
 
+void set_var(const char *name, const char *value) {
+    for (int i = 0; i < var_count; i++) {
+        if (strcmp(vars[i].name, name) == 0) {
+            strcpy(vars[i].value, value);
+            return;
+        }
+    }
+
+    if (var_count < MAX_VAR) {
+        strcpy(vars[var_count].name, name);
+        strcpy(vars[var_count].value, value);
+        var_count++;
+    }
+
+}
+
+
+char *get_var(const char *name) {
+    for (int i = 0; i < var_count; i++) {
+        if (strcmp(vars[i].name, name) == 0) {
+            return vars[i].value;
+        }
+    }
+    return NULL;
+}
+
+
+
 
 int existFile(char* path){
     FILE *f = fopen(path,"r");
@@ -474,9 +550,29 @@ void sigint_handler(int sig) {
 void cd(char* chemin){
     chdir(chemin);
 }
+void goku_path_absolute(){
+    char *cwd = getcwd(NULL, 0); // getcwd alloue un buffer
+    if (!cwd) {
+        perror("getcwd");
+        exit(1);
+    }
 
+    GOKU_PATH = malloc(strlen(cwd) + strlen("/ascii-animation.txt") + 1); // allocation pour le chemin complet
+    if (!GOKU_PATH) {
+        perror("malloc");
+        free(cwd);
+        exit(1);
+    }
+
+    strcpy(GOKU_PATH, cwd);          // copie le répertoire courant
+    strcat(GOKU_PATH, "/ascii-animation.txt"); // concatène le nom du fichier
+
+    printf("Chemin GOKU_PATH = %s\n", GOKU_PATH);
+
+    free(cwd);
+}
 void goku() {
-    FILE *file = fopen("ascii-animation.txt", "r");
+    FILE *file = fopen(GOKU_PATH, "r");
     if (!file) { printf("File not found\n"); return; }
 
     static char frames[FRAMES][LINES][LINE_LEN];
