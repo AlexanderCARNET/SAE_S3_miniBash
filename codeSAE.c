@@ -152,10 +152,7 @@ void mbash(char cm[MAXLI]) {
             case E_DEBUT:
                 if(c == '\0'){
                     etat = E_FIN;
-                }//else if(c == '.'){
-                   // etat = E_POINT;
-                //}
-                else if(c == ' '){
+                }else if(c == ' '){
                     etat = E_DEBUT;
                 }else{
                     etat = E_ARGUMENT;
