@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <glob.h>
 
 extern char **environ;
 #define FRAMES 23
@@ -20,6 +21,7 @@ int continu = 1;
 extern char **environ;
 pid_t current_child = -1;
 int animation_running = 0;
+int NB_PROC = 0;
 
 
 //declaration des fonctions
@@ -31,6 +33,7 @@ int existFile(char* path);
 void cd(char* chemin);
 void executerCommande(char cm[MAXLI]);
 void goku();
+void viderString(char* string);
 
 
 //ETATS
@@ -39,9 +42,10 @@ void goku();
 #define E_INIT 1
 #define E_ESPACE 2
 #define E_ARGUMENT 3
-#define E_POINT 4
-#define E_POINT_SLASH 5
+#define E_POINT_VIRGULE 4
 #define E_FORK 6
+#define E_FORK_FIN 7
+#define E_AND 8
 #define E_ERROR -1
 
 
@@ -98,37 +102,24 @@ void mbash(char cm[MAXLI]) {
     }
 
     //on lance l'automate
+    char commandes[MAXLI][MAXLI];
     char commande[MAXLI];
     int ind = 0;
     int indCommande = 0;
     int etat = E_DEBUT;
-    while(etat != E_FIN && etat != E_FORK){
+    while(etat != E_FIN && etat != E_FORK_FIN){
         char c = cm[ind];
         switch(etat){
             case E_DEBUT:
                 if(c == '\0'){
                     etat = E_FIN;
-                }else if(c == '.'){
-                    etat = E_POINT;
-                }else if(c == ' '){
+                }//else if(c == '.'){
+                   // etat = E_POINT;
+                //}
+                else if(c == ' '){
                     etat = E_DEBUT;
                 }else{
-                    etat = E_INIT;
-                    commande[indCommande] =  c;
-                    indCommande++;
-                    commande[indCommande] =  '\0';
-                }
-                break;
-
-            case E_INIT:
-                if(c == '\0'){
-                    etat = E_FIN;
-                }else if(c == ' '){
-                    etat = E_ESPACE;
-                    commande[indCommande] =  c;
-                    indCommande++;
-                    commande[indCommande] =  '\0';
-                }else{
+                    etat = E_ARGUMENT;
                     commande[indCommande] =  c;
                     indCommande++;
                     commande[indCommande] =  '\0';
@@ -138,6 +129,8 @@ void mbash(char cm[MAXLI]) {
             case E_ARGUMENT:
                 if(c == '\0'){
                     etat = E_FIN;
+                }else if(c == ';'){
+                    etat = E_POINT_VIRGULE;
                 }else if(c == ' '){
                     etat = E_ESPACE;
                     commande[indCommande] =  c;
@@ -156,6 +149,8 @@ void mbash(char cm[MAXLI]) {
                     etat = E_FIN;
                 }else if(c == ' '){
                     etat = E_ESPACE;
+                }else if(c == ';'){
+                    etat = E_POINT_VIRGULE;
                 }else if(c == '&'){
                     etat = E_FORK;
                 }else{
@@ -167,47 +162,115 @@ void mbash(char cm[MAXLI]) {
                 }
                 break;
 
-            case E_POINT:
-                break;
-
-            case E_POINT_SLASH:
-                break;
-
             case E_FORK:
-                if(fork() == 0){
-                    executerCommande(commande);
-                    exit(1);
+                if(c == '&'){
+                    etat = E_POINT_VIRGULE;
+                }else{
+                    NB_PROC++;
+                    if(fork() == 0){
+                        int pid = getpid();
+                        printf("[%i]%i\n", NB_PROC,pid);
+                        executerCommande(commande);
+                        exit(1);
+                    }
+                    usleep(50000);
+                    etat = E_FORK_FIN;
                 }
+                
                 break;
 
             case E_ERROR:
                 break;
+
+            case E_POINT_VIRGULE:
+                executerCommande(commande);
+                viderString(commande);
+                indCommande = 0;
+
+                etat = E_DEBUT;
+                commande[indCommande] =  c;
+                indCommande++;
+                commande[indCommande] =  '\0';
+
+                break;
+
 
             default:
                 etat = E_ERROR;
         }
         ind++;
     }
-
+    //printf("c ==== %s\n", commande);
     if(etat == E_FIN){
         executerCommande(commande);
     }
 
     //on efface la commande
-    int i = 0;
-    while(commande[i] != '\0'){
-        commande[i] = '\0';
-        i++;
-    }
+    viderString(commande);
+    indCommande = 0;
     
 }
 
+void viderString(char* string){
+    int i = 0;
+    while(string[i] != '\0'){
+        string[i] = '\0';
+        i++;
+    }
+}
+
 void executerCommande(char cm[MAXLI]){
+    strcpy(PATH,getenv("PATH"));
+
     //on met a jour la list d'arguments de la commande
     setArgs(cm);
 
     //on verifie si la commande est vide
     if (argv[0] == NULL) return;
+
+
+    if(strcmp(argv[0],"ls")==0){
+        int i = 1;
+        while(argv[i] != NULL){
+            if(strchr(argv[i], '?') || strchr(argv[i], '*')){
+                glob_t res;
+                glob(argv[i],0, NULL,&res);
+
+                char *tab_commande_pour_execve[MAXLI];
+                int ind_tab_execve = 0;
+                int ind_argv_parcours = 0;
+                
+                //on ajoute a la commande les parametres deja données sauf celui avec le char spécial
+                while(argv[ind_argv_parcours] != NULL){
+                    if(ind_argv_parcours != i){
+                        tab_commande_pour_execve[ind_tab_execve] = argv[ind_argv_parcours];
+                        ind_tab_execve++;
+                        ind_argv_parcours++;
+                    }else{
+                        //on ajoute a la commande les noms des fichiers trouvées
+                        for (int j = 0; j < res.gl_pathc; j++) {
+                            tab_commande_pour_execve[ind_tab_execve] = res.gl_pathv[j];
+                            ind_tab_execve++;
+                            //printf("Fichier trouvé : %s\n", res.gl_pathv[j]);
+                        }
+                        ind_argv_parcours++;
+                    }
+                }
+
+                tab_commande_pour_execve[ind_tab_execve] = NULL;
+                int pid = fork();
+                if(pid == 0){
+                    execve("/bin/ls", tab_commande_pour_execve, environ);
+                    perror("execve");
+                    globfree(&res);
+                    exit(0);
+                }
+                waitpid(pid,NULL,0);
+                return ;
+            }
+            i++;
+        }
+    }
 
     //on cherche le repertoir dans le path ou la commande existe
     char chemin[MAXLI];
