@@ -13,6 +13,8 @@ extern char **environ;
 #define MAXLI 2048
 #define MAX_VAR 100
 
+
+
 //declaration structure 
 typedef struct {
     char name[64];
@@ -20,6 +22,7 @@ typedef struct {
 } shell_var;
 
 //declaration des variables
+char *GOKU_PATH;
 char PATH[MAXLI];
 char cmd[MAXLI];
 char* argv[MAXLI];
@@ -61,6 +64,7 @@ void set_var(const char *name, const char *value);
 
 
 int main(int argc, char** argv) {
+    goku_path_absolute();
     signal(SIGINT, sigint_handler);
     strcpy(PATH,getenv("PATH"));
     printf("Bonjour %s\n", getenv("USER"));
@@ -479,9 +483,29 @@ void sigint_handler(int sig) {
 void cd(char* chemin){
     chdir(chemin);
 }
+void goku_path_absolute(){
+    char *cwd = getcwd(NULL, 0); // getcwd alloue un buffer
+    if (!cwd) {
+        perror("getcwd");
+        exit(1);
+    }
 
+    GOKU_PATH = malloc(strlen(cwd) + strlen("/ascii-animation.txt") + 1); // allocation pour le chemin complet
+    if (!GOKU_PATH) {
+        perror("malloc");
+        free(cwd);
+        exit(1);
+    }
+
+    strcpy(GOKU_PATH, cwd);          // copie le répertoire courant
+    strcat(GOKU_PATH, "/ascii-animation.txt"); // concatène le nom du fichier
+
+    printf("Chemin GOKU_PATH = %s\n", GOKU_PATH);
+
+    free(cwd);
+}
 void goku() {
-    FILE *file = fopen("ascii-animation.txt", "r");
+    FILE *file = fopen(GOKU_PATH, "r");
     if (!file) { printf("File not found\n"); return; }
 
     static char frames[FRAMES][LINES][LINE_LEN];
