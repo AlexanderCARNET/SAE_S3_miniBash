@@ -86,6 +86,8 @@ int main(int argc, char** argv) {
     printf(" - gohan\n");
     printf(" - ./ (éxécution d'un fichier)\n");
     printf(" - cd <répertoire>\n");
+    printf(" - Ajout de variable avec valeur : <nom>=<valeur>\n");
+    printf(" - Accés au variable : $<nom>\n");
     
     while (continu) {
         strcpy(PATH,getenv("PATH"));
