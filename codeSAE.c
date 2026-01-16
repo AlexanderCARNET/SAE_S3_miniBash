@@ -210,7 +210,11 @@ void mbash(char cm[MAXLI]) {
                         exit(1);
                     }
                     usleep(50000);
-                    etat = E_FORK_FIN;
+                    //etat = E_FORK_FIN;
+                    etat = E_DEBUT;
+                    viderString(commande);
+                    commande[0] = c;
+                    indCommande = 1;
                 }
                 
                 break;
@@ -273,7 +277,7 @@ void executerCommande(char cm[MAXLI]){
     //on verifie si la commande est vide
     if (argv[0] == NULL) return;
 
-
+    //gerer les ? et les * dans le ls
     if(strcmp(argv[0],"ls")==0){
         int i = 1;
         while(argv[i] != NULL){
@@ -296,7 +300,6 @@ void executerCommande(char cm[MAXLI]){
                         for (int j = 0; j < res.gl_pathc; j++) {
                             tab_commande_pour_execve[ind_tab_execve] = res.gl_pathv[j];
                             ind_tab_execve++;
-                            //printf("Fichier trouvé : %s\n", res.gl_pathv[j]);
                         }
                         ind_argv_parcours++;
                     }
