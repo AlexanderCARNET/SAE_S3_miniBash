@@ -86,15 +86,21 @@ int main(int argc, char** argv) {
     printf("\n");
     printf("Bienvenue dans mbash, bash minimaliste en C.\n");
     printf("Les commandes fonctionnelles sont :\n");
-    printf(" - Celle presente dans le PATH\n");
+    printf(" - Celles présentes dans le PATH\n");
     printf(" - exit\n");
     printf(" - history\n");
     printf(" - goku\n");
     printf(" - gohan\n");
-    printf(" - ./ (éxécution d'un fichier)\n");
+    printf(" - ./ (exécution d'un fichier)\n");
     printf(" - cd <répertoire>\n");
-    printf(" - Ajout de variable avec valeur : <nom>=<valeur>\n");
-    printf(" - Accés au variable : $<nom>\n");
+    printf(" - Ajout de variables avec valeur : <nom>=<valeur>\n");
+    printf(" - Accès aux variables : $<nom>\n");
+    printf(" - Utilisation des expressions régulières avec ls, par exemple ls *.c ou ls *.?\n");
+    printf(" - Enchaîner plusieurs commandes sur la même ligne avec des ; ou un &&\n");
+    printf(" - Lancer une tâche en arrière-plan avec &\n");
+
+
+
     
     while (continu) {
         strcpy(PATH,getenv("PATH"));
@@ -567,8 +573,6 @@ void goku_path_absolute(){
 
     strcpy(GOKU_PATH, cwd);          // copie le répertoire courant
     strcat(GOKU_PATH, "/ascii-animation.txt"); // concatène le nom du fichier
-
-    printf("Chemin GOKU_PATH = %s\n", GOKU_PATH);
 
     free(cwd);
 }
