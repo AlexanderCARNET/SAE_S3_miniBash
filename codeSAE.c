@@ -66,7 +66,7 @@ void goku_path_absolute();
 #define E_FORK 6
 #define E_FORK_FIN 7
 #define E_AND 8
-#define E_PIPE 9
+
 #define E_ERROR -1
 
 
@@ -168,8 +168,6 @@ void mbash(char cm[MAXLI]) {
                     etat = E_FIN;
                 }else if(c == ';'){
                     etat = E_POINT_VIRGULE;
-                }else if(c == '|'){
-                    etat = E_PIPE;
                 }else if(c == ' '){
                     etat = E_ESPACE;
                     commande[indCommande] =  c;
@@ -188,8 +186,6 @@ void mbash(char cm[MAXLI]) {
                     etat = E_FIN;
                 }else if(c == ' '){
                     etat = E_ESPACE;
-                }else if(c == '|'){
-                    etat = E_PIPE;
                 }else if(c == ';'){
                     etat = E_POINT_VIRGULE;
                 }else if(c == '&'){
@@ -201,14 +197,6 @@ void mbash(char cm[MAXLI]) {
                     commande[indCommande] =  '\0';
                     
                 }
-                break;
-            
-            case E_PIPE:
-                etat = E_DEBUT;
-                viderString(commande);
-                commande[0] = c;
-                indCommande = 1;
-                
                 break;
 
             case E_FORK:
